@@ -1,53 +1,56 @@
-name: Updating yarn lockfile
-
-on:
-  schedule:
-    - cron: '0 */12 * * MON-FRI'
-
-  workflow_dispatch:
-
 jobs:
   build:
-    runs-on: ubuntu-latest
     defaults:
       run:
         working-directory: graylog2-web-interface
-
+    runs-on: self-hosted
     steps:
-      - uses: actions/checkout@v3
-      - name: Install dependencies
-        run: yarn install
-      - name: Create/Update Pull Request
-        id: pr-create
-        uses: peter-evans/create-pull-request@b3a2c5d525a1eb75e75c781e45a1bf3bfc23bdc6
-        with:
-          title: Updating yarn lockfile
-          body: This PR was created by a job that is running periodically to update the yarn lockfile after transitive dependencies have been updated.
-          author: Gary Bot <garybot2@graylog.com>
-          branch: update-yarn-lockfile
-          committer: Gary Bot <garybot2@graylog.com>
-          commit-message: Updating yarn lockfile
-          delete-branch: true
+    - continue-on-error: true
+      uses: actions/checkout@v3
+    - continue-on-error: true
+      name: Install dependencies
+      run: yarn install
+    - continue-on-error: true
+      id: pr-create
+      name: Create/Update Pull Request
+      uses: peter-evans/create-pull-request@b3a2c5d525a1eb75e75c781e45a1bf3bfc23bdc6
+      with:
+        author: Gary Bot <garybot2@graylog.com>
+        body: This PR was created by a job that is running periodically to update
+          the yarn lockfile after transitive dependencies have been updated.
+        branch: update-yarn-lockfile
+        commit-message: Updating yarn lockfile
+        committer: Gary Bot <garybot2@graylog.com>
+        delete-branch: true
+        title: Updating yarn lockfile
+    - continue-on-error: true
+      env:
+        GH_TOKEN: ${{ github.token }}
+      id: pr-infos
+      if: ${{ steps.pr-create.outputs.pull-request-number && steps.pr-create.outputs.pull-request-operation
+        != 'closed' }}
+      name: Get headRef and SHA of PR
+      run: 'HEADREF=$(gh pr view ${{ steps.pr-create.outputs.pull-request-number }}
+        --json headRefName --template ''{{.headRefName}}'')
 
-      - name: Get headRef and SHA of PR
-        id: pr-infos
-        if: ${{ steps.pr-create.outputs.pull-request-number && steps.pr-create.outputs.pull-request-operation != 'closed' }}
-        run: |
-          HEADREF=$(gh pr view ${{ steps.pr-create.outputs.pull-request-number }} --json headRefName --template '{{.headRefName}}')
-          echo "sha=$(git rev-parse origin/$HEADREF)" >> $GITHUB_OUTPUT
-          echo "headref=$HEADREF" >> $GITHUB_OUTPUT
-        env:
-          GH_TOKEN: ${{ github.token }}
+        echo "sha=$(git rev-parse origin/$HEADREF)" >> $GITHUB_OUTPUT
 
-      - name: Request dispatched PR build
-        if: ${{ steps.pr-create.outputs.pull-request-number && steps.pr-create.outputs.pull-request-operation != 'closed' }}
-        run: >
-          gh workflow run -R Graylog2/graylog-project-internal pr-build.yml --ref master
-          -f caller_repo=${{ github.repository }}
-          -f caller_pr_nr=${{ steps.pr-create.outputs.pull-request-number }}
-          -f caller_base_branch=master
-          -f caller_head_branch=${{ steps.pr-infos.outputs.headref }}
-          -f head_sha=${{ steps.pr-infos.outputs.sha }}
-          -f initial_actor="Dr. Lint-a-lot"
-        env:
-          GITHUB_TOKEN: ${{ secrets.PAT_GRAYLOG_PROJECT_INTERNAL_WORKFLOW_RW }}
+        echo "headref=$HEADREF" >> $GITHUB_OUTPUT
+
+        '
+    - continue-on-error: true
+      env:
+        GITHUB_TOKEN: ${{ secrets.PAT_GRAYLOG_PROJECT_INTERNAL_WORKFLOW_RW }}
+      if: ${{ steps.pr-create.outputs.pull-request-number && steps.pr-create.outputs.pull-request-operation
+        != 'closed' }}
+      name: Request dispatched PR build
+      run: 'gh workflow run -R Graylog2/graylog-project-internal pr-build.yml --ref
+        master -f caller_repo=${{ github.repository }} -f caller_pr_nr=${{ steps.pr-create.outputs.pull-request-number
+        }} -f caller_base_branch=master -f caller_head_branch=${{ steps.pr-infos.outputs.headref
+        }} -f head_sha=${{ steps.pr-infos.outputs.sha }} -f initial_actor="Dr. Lint-a-lot"
+
+        '
+name: Updating yarn lockfile
+on:
+  repository_dispatch:
+    types: trigger-ga___updating-lockfile.yml

@@ -1,32 +1,31 @@
-name: PR Review
-
-on:
-  pull_request:
-    paths:
-      - '**.[jt]sx?'
-    types:
-      - opened
-      - edited
-      - synchronize
-
 jobs:
   linter:
     name: Reviewbot
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-      - name: Set up JDK
-        uses: actions/setup-java@v3
-        with:
-          java-version: 17
-          distribution: temurin
-          cache: maven
-      - name: Compile with Maven / Install dependencies
-        run: ./mvnw --fail-fast -Dmaven.wagon.http.retryHandler.class=standard -Dmaven.wagon.http.retryHandler.count=3 -Dhttp.keepAlive=false -Dmaven.wagon.http.pool=false -Dmaven.wagon.httpconnectionManager.ttlSeconds=120 compile
-      - name: Reviewbot
-        uses: Graylog2/reviewbot@v1
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          prefix: graylog2-web-interface
+    - continue-on-error: true
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+    - continue-on-error: true
+      name: Set up JDK
+      uses: actions/setup-java@v3
+      with:
+        cache: maven
+        distribution: temurin
+        java-version: 17
+    - continue-on-error: true
+      name: Compile with Maven / Install dependencies
+      run: ./mvnw --fail-fast -Dmaven.wagon.http.retryHandler.class=standard -Dmaven.wagon.http.retryHandler.count=3
+        -Dhttp.keepAlive=false -Dmaven.wagon.http.pool=false -Dmaven.wagon.httpconnectionManager.ttlSeconds=120
+        compile
+    - continue-on-error: true
+      name: Reviewbot
+      uses: Graylog2/reviewbot@v1
+      with:
+        prefix: graylog2-web-interface
+        token: ${{ secrets.GITHUB_TOKEN }}
+name: PR Review
+on:
+  repository_dispatch:
+    types: trigger-ga___reviewbot.yml

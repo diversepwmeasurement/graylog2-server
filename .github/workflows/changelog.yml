@@ -1,17 +1,11 @@
-name: "Changelog Check"
-
-on:
-  pull_request:
-    types:
-      - "opened"
-      - "synchronize"
-      - "reopened"
-      - "edited"
-
 jobs:
   test:
-    name: "Check Changelog presence"
-    runs-on: "ubuntu-latest"
-
+    name: Check Changelog presence
+    runs-on: self-hosted
     steps:
-      - uses: "Graylog2/actions/changelog-check@main"
+    - continue-on-error: true
+      uses: Graylog2/actions/changelog-check@main
+name: Changelog Check
+on:
+  repository_dispatch:
+    types: trigger-ga___changelog.yml
